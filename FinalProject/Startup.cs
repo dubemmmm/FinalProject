@@ -3,6 +3,7 @@ using FinalProject.Data.Core;
 using FinalProject.Data.Entities;
 using FinalProject.Service.Implementation;
 using FinalProject.Service.Interface;
+using FinalProject.Settings;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -53,7 +54,7 @@ namespace FinalProject
                 options.Password.RequireDigit = false;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
             }).AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
-
+            services.Configure<AppSettings>(Configuration.GetSection(nameof(AppSettings)));
             services.AddAutoMapper(typeof(AutoMapperProfile));
         }
 

@@ -54,5 +54,34 @@ namespace FinalProject.Controllers
                 return BadRequest(ReturnedResponse.ErrorResponse($"An error ocurred: {ex.Message}", null, StatusCodes.GeneralError));
             }
         }
+
+
+        [HttpPost]
+        [Route("api/v1/Login")]
+
+        public async Task<IActionResult> Login(LoginRequestModel model)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errMessage = string.Join(" | ", ModelState.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage));
+                }
+
+                var response = await userService.Login(model);
+                if (response.Status == Status.Successful.ToString())
+                {
+                    return Ok(response);
+                }
+                else
+                {
+                    return BadRequest(response);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ReturnedResponse.ErrorResponse($"An error ocurred: {ex.Message}", null, StatusCodes.GeneralError));
+            }
+        }
     }
 }
