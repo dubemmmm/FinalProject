@@ -9,21 +9,32 @@ using System.Linq;
 using FinalProject.Data.Constants;
 using AutoMapper;
 using FinalProject.Data.Models.DTOs;
+using Microsoft.IdentityModel.Tokens;
+using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using System;
+using FinalProject.Settings;
+using Microsoft.Extensions.Options;
+using FinalProject.Data.Models.ResponseModels;
 
 namespace FinalProject.Service.Implementation
 {
     public class UserService : IUserService
     {
         private readonly ApplicationDbContext context;
+        private readonly AppSettings _appSettings;
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
         private readonly IMapper mapper;
-        public UserService(ApplicationDbContext context, UserManager<User> userManager, IMapper mapper, SignInManager<User> signInManager)
+        public UserService(ApplicationDbContext context, UserManager<User> userManager, IMapper mapper, SignInManager<User> signInManager, IOptions<AppSettings> appSettings)
         {
             this.context = context;
             _userManager = userManager;
             this.mapper = mapper;
             _signInManager = signInManager;
+            _appSettings = appSettings.Value;
         }
 
         public async Task<ApiResponse> CreateUser(CreateUserRequestModel model)
@@ -68,7 +79,34 @@ namespace FinalProject.Service.Implementation
             if(isValid.Succeeded)
             {
                 //todo: implement jwt here
-                return ReturnedResponse.SuccessResponse("User successfully logged in", null, StatusCodes.Successful);
+                var authClaims = new List<Claim>
+                    {
+                      new Claim("userId", user.Id)
+                    };
+
+                var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_appSettings.JwtSecret));
+
+                var token = new JwtSecurityToken(
+                    issuer: _appSettings.ValidIssuer,
+                    audience: _appSettings.ValidAudience,
+                    expires: DateTime.Now.AddHours(_appSettings.JwtLifespan),
+                    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256),
+                    claims: authClaims
+                    );
+
+                var bearerToken = new JwtSecurityTokenHandler().WriteToken(token);
+
+
+
+                var loginResponseModel = new LoginResponseModel
+                {
+                    AccessToken = bearerToken,
+                    TokenType = "Bearer",
+                    Email = model.Email,
+                    ExpiresIn = DateTime.Now.AddHours(_appSettings.JwtLifespan),
+                };
+
+                return ReturnedResponse.SuccessResponse("User successfully logged in", loginResponseModel, StatusCodes.Successful);
             }
 
             return ReturnedResponse.ErrorResponse("User couldn't login", null, StatusCodes.GeneralError);
